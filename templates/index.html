@@ -207,6 +207,14 @@ tr:hover td{background:var(--s2)}
 <div class="input-wrap">
   <div class="input-card">
     <div class="wallet-field">
+      <label class="field-label" for="nansen-key">Your Nansen API Key</label>
+      <input type="password" id="nansen-key" placeholder="Paste your Nansen API key from nansen.ai/api" autocomplete="off" spellcheck="false"/>
+      <div style="margin-top:7px;font-size:11px;color:var(--t3)">
+        Don't have a key? <a href="https://nansen.ai/api" target="_blank" style="color:var(--g);text-decoration:none">Get one free at nansen.ai/api →</a>
+        &nbsp;·&nbsp; Your key is never stored. Used only for this request.
+      </div>
+    </div>
+    <div class="wallet-field">
       <label class="field-label" for="wallet">EVM Wallet Address</label>
       <input type="text" id="wallet" placeholder="0x28c6c06298d514db089934071355e5743bf21d60" autocomplete="off" spellcheck="false"/>
     </div>
@@ -310,9 +318,10 @@ const fHash = h => h ? h.slice(0,8)+'…'+h.slice(-6) : '—';
 
 // ── Main ────────────────────────────────────────────────────────────────────
 async function run() {
-  const addr  = document.getElementById('wallet').value.trim();
-  const dfrom = document.getElementById('dfrom').value;
-  const dto   = document.getElementById('dto').value;
+  const addr    = document.getElementById('wallet').value.trim();
+  const dfrom   = document.getElementById('dfrom').value;
+  const dto     = document.getElementById('dto').value;
+  const api_key = document.getElementById('nansen-key').value.trim();
 
   // Reset
   document.getElementById('error-box').className = 'error-box';
@@ -328,7 +337,7 @@ async function run() {
     const res  = await fetch('/api/analyze', {
       method:  'POST',
       headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify({address:addr, date_from:dfrom, date_to:dto})
+      body:    JSON.stringify({address:addr, date_from:dfrom, date_to:dto, api_key:api_key})
     });
     const data = await res.json();
 

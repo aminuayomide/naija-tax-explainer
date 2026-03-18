@@ -1,8 +1,7 @@
 """
 🇳🇬 Nigerian On-Chain Tax Explainer
-Data: Etherscan API (free, unlimited)
-Classification: Nansen labeling taxonomy (DEX swap = taxable)
-Tax engine: Nigeria PITA + NTA 2025 progressive bands
+Users bring their own Nansen API key — each query uses their credits.
+This drives Nansen credit consumption and ecosystem adoption.
 Built for Nansen Points Season 3 Community Showcase.
 """
 
@@ -16,9 +15,8 @@ app = Flask(__name__)
 CORS(app)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-ETHERSCAN_KEY  = os.environ.get("ETHERSCAN_API_KEY", "2NS4284PMNRUJIG8QW3Y8EMCGUPTECJY2P")
-ETHERSCAN_BASE = "https://api.etherscan.io/v2/api"
-EXCHANGE_URL   = "https://api.exchangerate-api.com/v4/latest/USD"
+NANSEN_BASE  = "https://api.nansen.ai/api/v1"
+EXCHANGE_URL = "https://api.exchangerate-api.com/v4/latest/USD"
 
 # ── Nigerian Tax Bands ─────────────────────────────────────────────────────────
 BANDS_PITA = [
@@ -40,32 +38,13 @@ BANDS_NTA = [
 ]
 
 # ── Nansen DEX Taxonomy ────────────────────────────────────────────────────────
-# Known DEX router addresses — same protocols Nansen labels as taxable swaps
-DEX_ADDRESSES = {
-    "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",  # Uniswap V2 Router
-    "0xe592427a0aece92de3edee1f18e0157c05861564",  # Uniswap V3 Router
-    "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",  # Uniswap V3 Router 2
-    "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b",  # Uniswap Universal Router
-    "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad",  # Uniswap Universal Router 2
-    "0x1111111254eeb25477b68fb85ed929f73a960582",  # 1inch V5
-    "0x111111125421ca6dc452d289314280a0f8842a65",  # 1inch V6
-    "0xdef171fe48cf0115b1d80b88dc8eab59176fee57",  # ParaSwap
-    "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f",  # SushiSwap Router
-    "0xdef1c0ded9bec7f1a1670819833240f027b25eff",  # 0x / Matcha
-    "0x9008d19f58aabd9ed0d60971565aa8510560ab41",  # CoW Protocol
-    "0xba12222222228d8ba445958a75a0704d566bf2c8",  # Balancer Vault
-    "0x99a58482bd75cbab83b27ec03ca68ff489b5788f",  # Curve Router
-}
+TAXABLE_KEYWORDS = [
+    "dex", "swap", "uniswap", "sushiswap", "curve", "balancer",
+    "pancakeswap", "1inch", "paraswap", "kyber", "dodo", "velodrome",
+    "aerodrome", "odos", "camelot", "trader joe", "defi", "trade", "exchange"
+]
 
-# Swap method signatures
-SWAP_SELECTORS = {
-    "0x38ed1739", "0x8803dbee", "0x7ff36ab5",
-    "0x18cbafe5", "0x414bf389", "0xdb3e2198",
-    "0xac9650d8", "0x5ae401dc", "0x04e45aaf",
-    "0xb858183f", "0x12aa3caf",
-}
-
-# ── Core helpers ───────────────────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────────────────────
 def get_bands(date_to):
     return BANDS_NTA if date_to >= "2026-01-01" else BANDS_PITA
 
@@ -75,17 +54,12 @@ def get_regime(date_to):
     return {"label": "Personal Income Tax Act (PITA)", "note": "pita"}
 
 def is_taxable(tx):
-    to_addr    = (tx.get("to") or "").lower()
-    func       = (tx.get("functionName") or "").lower()
-    inp        = (tx.get("input") or "")[:10]
-    if to_addr in DEX_ADDRESSES:
-        return True
-    if inp in SWAP_SELECTORS:
-        return True
-    swap_words = ["swap", "exchange", "exactinput", "exactoutput"]
-    if any(w in func for w in swap_words):
-        return True
-    return False
+    haystack = " ".join(filter(None, [
+        tx.get("transaction_type"), tx.get("transactionType"),
+        tx.get("label"), tx.get("type"), tx.get("txType"),
+        tx.get("action"), tx.get("protocol"), tx.get("dex_name"),
+    ])).lower()
+    return any(k in haystack for k in TAXABLE_KEYWORDS)
 
 def calc_tax(ngn_income, bands):
     remaining, total_tax, breakdown = ngn_income, 0.0, []
@@ -108,70 +82,62 @@ def get_ngn_rate():
     except Exception:
         return 1620.0
 
-def get_eth_price():
-    try:
-        r = requests.get(
-            ETHERSCAN_BASE,
-            params={"chainid": 1, "module": "stats", "action": "ethprice", "apikey": ETHERSCAN_KEY},
-            timeout=8
-        )
-        d = r.json()
-        if d.get("status") == "1":
-            return float(d["result"]["ethusd"])
-    except Exception:
-        pass
-    return 3200.0
+def fetch_nansen(addr, date_from, date_to, api_key):
+    """Fetch transactions using the user's own Nansen API key."""
+    headers = {"Content-Type": "application/json", "apikey": api_key}
+    transactions = []
+    error = None
 
-def date_to_ts(date_str, end=False):
-    d  = datetime.date.fromisoformat(date_str)
-    dt = datetime.datetime(d.year, d.month, d.day, 23 if end else 0, 59 if end else 0, 59 if end else 0)
-    return int(dt.timestamp())
-
-def fetch_transactions(addr, date_from, date_to):
-    ts_from = date_to_ts(date_from, end=False)
-    ts_to   = date_to_ts(date_to,   end=True)
-    all_txs = []
-
-    for page in range(1, 6):
+    for page in range(1, 4):
         try:
-            r = requests.get(ETHERSCAN_BASE, params={
-                "chainid":    1,
-                "module":     "account",
-                "action":     "txlist",
-                "address":    addr,
-                "startblock": 0,
-                "endblock":   99999999,
-                "page":       page,
-                "offset":     200,
-                "sort":       "desc",
-                "apikey":     ETHERSCAN_KEY,
-            }, timeout=20)
+            payload = {
+                "address":         addr,
+                "chain":           "ethereum",
+                "hide_spam_token": True,
+                "date": {
+                    "from": date_from + "T00:00:00Z",
+                    "to":   date_to   + "T23:59:59Z",
+                },
+                "pagination": {
+                    "page":     page,
+                    "per_page": 100,
+                },
+                "order_by": [{"field": "block_timestamp", "direction": "DESC"}],
+            }
+            resp = requests.post(
+                f"{NANSEN_BASE}/profiler/address/transactions",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
 
-            data = r.json()
-            if data.get("status") == "0":
-                result = data.get("result", "")
-                if not result or result == [] or "No transactions" in data.get("message",""):
-                    break
-                return [], str(result)
+            if resp.status_code == 403:
+                err = resp.json()
+                if "credits" in str(err).lower():
+                    return [], "insufficient_credits"
+                return [], f"Nansen error: {resp.text[:200]}"
 
-            txs = data.get("result", [])
-            if not txs:
-                break
+            if resp.status_code == 401:
+                return [], "invalid_key"
 
-            filtered = [tx for tx in txs if ts_from <= int(tx.get("timeStamp", 0)) <= ts_to]
-            all_txs.extend(filtered)
+            if not resp.ok:
+                return [], f"Nansen {resp.status_code}: {resp.text[:200]}"
 
-            if txs and int(txs[-1].get("timeStamp", 0)) < ts_from:
-                break
-            if len(txs) < 200:
+            data = resp.json()
+            txs  = (data.get("data") or data.get("transactions") or
+                    data.get("results") or (data if isinstance(data, list) else []))
+            transactions.extend(txs)
+
+            pagination = data.get("pagination", {}) if isinstance(data, dict) else {}
+            if len(txs) < 100 or pagination.get("is_last_page"):
                 break
 
         except requests.exceptions.Timeout:
-            return all_txs, "Request timed out — try a shorter date range."
+            return transactions, "timeout"
         except Exception as e:
-            return all_txs, str(e)
+            return transactions, str(e)
 
-    return all_txs, None
+    return transactions, None
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route("/")
@@ -185,20 +151,38 @@ def favicon():
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     body      = request.json or {}
-    addr      = (body.get("address")   or "").strip().lower()
+    addr      = (body.get("address")   or "").strip()
     date_from = (body.get("date_from") or "").strip()
     date_to   = (body.get("date_to")   or "").strip()
+    api_key   = (body.get("api_key")   or "").strip()
 
+    # Validate inputs
+    if not api_key:
+        return jsonify({"error": "Please enter your Nansen API key to continue."}), 400
     if not addr or not addr.startswith("0x") or len(addr) < 40:
         return jsonify({"error": "Invalid EVM address — must start with 0x, 42 characters."}), 400
     if not date_from or not date_to or date_from > date_to:
         return jsonify({"error": "Invalid date range — From must be before To."}), 400
 
-    usd_ngn   = get_ngn_rate()
-    eth_price = get_eth_price()
-    regime    = get_regime(date_to)
+    usd_ngn = get_ngn_rate()
+    regime  = get_regime(date_to)
 
-    transactions, fetch_error = fetch_transactions(addr, date_from, date_to)
+    # Fetch using user's key
+    transactions, fetch_error = fetch_nansen(addr, date_from, date_to, api_key)
+
+    # Handle specific errors with helpful messages
+    if fetch_error == "invalid_key":
+        return jsonify({"error":
+            "Invalid Nansen API key. Check your key at nansen.ai/api and try again."}), 401
+
+    if fetch_error == "insufficient_credits":
+        return jsonify({"error":
+            "Your Nansen API key has insufficient credits. "
+            "Top up at nansen.ai/api to continue. Credits are valid for 1 year."}), 402
+
+    if fetch_error == "timeout":
+        return jsonify({"error":
+            "Request timed out — try a shorter date range (3 months works best)."}), 504
 
     if fetch_error and not transactions:
         return jsonify({"error": fetch_error}), 502
@@ -208,29 +192,31 @@ def analyze():
             "No transactions found for this wallet in the selected period. "
             "Try a wider date range or verify the address."}), 404
 
+    # Classify using Nansen taxonomy
     taxable_txs     = [tx for tx in transactions if is_taxable(tx)]
     non_taxable_txs = [tx for tx in transactions if not is_taxable(tx)]
 
-    swap_vol_eth = sum(float(tx.get("value", 0)) / 1e18 for tx in taxable_txs)
-    swap_vol_usd = swap_vol_eth * eth_price
+    # Calculate gain
+    swap_vol_usd = sum(
+        float(tx.get("volume_usd") or tx.get("volumeUsd") or
+              tx.get("value_usd")  or tx.get("usd_value") or 0)
+        for tx in taxable_txs
+    )
     gain_usd     = swap_vol_usd * 0.15
     gain_ngn     = gain_usd * usd_ngn
     tax_result   = calc_tax(gain_ngn, get_bands(date_to))
     eff_rate     = (tax_result["total"] / gain_ngn * 100) if gain_ngn > 0 else 0.0
 
     def serialize(tx):
-        ts    = int(tx.get("timeStamp", 0))
-        func  = tx.get("functionName", "") or ""
-        label = func.split("(")[0] if "(" in func else func
-        label = label or ("dex swap" if is_taxable(tx) else "transfer")
-        dt    = datetime.datetime.utcfromtimestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ") if ts else ""
         return {
-            "date":       dt,
-            "type":       label,
-            "chain":      "ethereum",
-            "hash":       tx.get("hash", ""),
+            "date":       tx.get("block_timestamp") or tx.get("timestamp") or "",
+            "type":       (tx.get("transaction_type") or tx.get("transactionType") or
+                           tx.get("label") or tx.get("type") or tx.get("action") or "transfer"),
+            "chain":      tx.get("chain") or tx.get("blockchain") or "eth",
+            "hash":       (tx.get("tx_hash") or tx.get("transaction_hash") or
+                           tx.get("hash") or tx.get("txHash") or ""),
             "taxable":    is_taxable(tx),
-            "volume_usd": round(float(tx.get("value", 0)) / 1e18 * eth_price, 2),
+            "volume_usd": float(tx.get("volume_usd") or tx.get("value_usd") or 0),
         }
 
     return jsonify({
@@ -250,7 +236,7 @@ def analyze():
         "eff_rate":          round(eff_rate, 2),
         "tax_breakdown":     tax_result["breakdown"],
         "transactions":      [serialize(tx) for tx in transactions[:50]],
-        "warning":           fetch_error,
+        "warning":           None,
     })
 
 if __name__ == "__main__":
