@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Naija Tax — Nigerian On-Chain Tax Explainer</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#008751; --gd:#005f38; --gl:rgba(0,135,81,.09); --gg:rgba(0,135,81,.2);
+  --bg:#0c0e0d; --s1:#131614; --s2:#191c1a; --s3:#1f2320; --s4:#262a27;
+  --b1:rgba(255,255,255,.06); --b2:rgba(255,255,255,.11); --b3:rgba(255,255,255,.18);
+  --t1:#e6ece7; --t2:#8fa090; --t3:#4d5a4e;
+  --am:#d4a843; --re:#c0392b; --bl:#4a9eff;
+  --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+  --r:10px; --rl:14px;
+}
+html{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:15px;line-height:1.6}
+body{min-height:100vh;padding:0 0 6rem}
+
+/* ── TOP BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:100;background:rgba(12,14,13,.88);backdrop-filter:blur(12px)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.flag{display:flex;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.fg{width:18px;height:12px;background:var(--g)}
+.fw{width:18px;height:12px;background:#f0f0f0}
+.brand{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--t1)}
+.brand span{color:var(--g)}
+.nansen-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--t2);background:var(--s2);border:1px solid var(--b2);padding:4px 12px;border-radius:20px}
+.nansen-dot{width:5px;height:5px;border-radius:50%;background:var(--g);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── HERO ── */
+.hero{text-align:center;padding:4rem 1rem 3rem;max-width:640px;margin:0 auto}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--g);background:var(--gl);border:1px solid rgba(0,135,81,.25);padding:5px 14px;border-radius:20px;margin-bottom:1.5rem}
+.hero h1{font-size:clamp(28px,5vw,44px);font-weight:600;letter-spacing:-.03em;line-height:1.15;margin-bottom:1rem;color:var(--t1)}
+.hero h1 em{font-style:normal;color:var(--g)}
+.hero p{font-size:15px;color:var(--t2);max-width:480px;margin:0 auto}
+
+/* ── INPUT CARD ── */
+.input-wrap{max-width:760px;margin:0 auto;padding:0 1rem}
+.input-card{background:var(--s1);border:1px solid var(--b2);border-radius:var(--rl);padding:1.75rem;margin-bottom:1rem}
+.field-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:7px;display:block}
+.wallet-field{margin-bottom:1.25rem}
+input[type=text]{
+  width:100%;height:50px;padding:0 16px;
+  background:var(--s2);border:1px solid var(--b2);
+  border-radius:var(--r);color:var(--t1);font-size:13px;font-family:var(--mono);
+  outline:none;transition:border-color .2s,box-shadow .2s
+}
+input[type=text]:focus{border-color:var(--g);box-shadow:0 0 0 3px var(--gg)}
+input[type=text]::placeholder{color:var(--t3)}
+.date-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end}
+input[type=date]{
+  width:100%;height:44px;padding:0 12px;
+  background:var(--s2);border:1px solid var(--b2);
+  border-radius:var(--r);color:var(--t1);font-size:14px;font-family:var(--font);
+  outline:none;color-scheme:dark;transition:border-color .2s
+}
+input[type=date]:focus{border-color:var(--g)}
+.btn-analyze{
+  height:44px;padding:0 28px;
+  background:var(--g);color:#fff;border:none;
+  border-radius:var(--r);font-size:14px;font-weight:600;
+  font-family:var(--font);cursor:pointer;white-space:nowrap;
+  transition:background .15s,transform .1s,box-shadow .15s;
+  box-shadow:0 0 0 0 var(--gg)
+}
+.btn-analyze:hover{background:var(--gd);box-shadow:0 4px 20px var(--gg)}
+.btn-analyze:active{transform:scale(.98)}
+.btn-analyze:disabled{background:var(--s4);color:var(--t3);cursor:not-allowed;transform:none;box-shadow:none}
+
+.disclaimer{margin-top:1.25rem;padding:12px 16px;background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.15);border-radius:var(--r);font-size:12px;color:var(--t2);line-height:1.75}
+.disclaimer strong{color:var(--am)}
+
+/* ── STATES ── */
+.error-box{display:none;padding:14px 18px;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);border-radius:var(--r);color:#e57368;font-size:13px;margin-bottom:1rem}
+.error-box.show{display:block}
+.warn-box{display:none;padding:12px 16px;background:rgba(212,168,67,.07);border:1px solid rgba(212,168,67,.2);border-radius:var(--r);font-size:12px;color:var(--am);margin-bottom:1rem;line-height:1.6}
+.warn-box.show{display:block}
+
+/* ── SKELETON LOADER ── */
+.skeleton-wrap{display:none;padding:0 1rem;max-width:760px;margin:0 auto}
+.skeleton-wrap.show{display:block}
+.skel{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-summary{height:72px;margin-bottom:1rem}
+.skel-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1rem}
+.skel-metric{height:80px}
+.skel-bands{height:220px;margin-bottom:1rem}
+.skel-table{height:180px}
+.skel-label{height:14px;width:180px;margin-bottom:12px;border-radius:4px}
+
+/* ── RESULTS ── */
+.results{display:none;max-width:760px;margin:0 auto;padding:0 1rem}
+.results.show{display:block}
+
+/* summary */
+.summary-card{background:var(--s1);border:1px solid rgba(0,135,81,.22);border-left:3px solid var(--g);border-radius:var(--rl);padding:1.25rem 1.5rem;margin-bottom:1.5rem;font-size:14px;color:var(--t1);line-height:1.8}
+.summary-card strong{color:var(--g);font-weight:600}
+.gain-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;vertical-align:middle;margin-left:4px}
+.gb-real{background:rgba(0,135,81,.15);color:#4caf7d}
+.gb-est{background:rgba(212,168,67,.15);color:var(--am)}
+
+/* metrics */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.metric{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rl);padding:1.1rem 1.25rem}
+.m-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px}
+.m-val{font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--t1)}
+.m-sub{font-size:11px;color:var(--t3);margin-top:4px}
+.metric.c-green .m-val{color:var(--g)}
+.metric.c-amber .m-val{color:var(--am)}
+.metric.c-red   .m-val{color:#e57368}
+
+/* section label */
+.sec-label{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin:1.75rem 0 .75rem}
+.regime-pill{font-size:10px;font-weight:700;padding:2px 9px;border-radius:8px;text-transform:none;letter-spacing:0}
+.rp-nta{background:rgba(74,158,255,.12);color:var(--bl)}
+.rp-pita{background:rgba(212,168,67,.12);color:var(--am)}
+
+/* nta callout */
+.nta-callout{display:flex;gap:10px;padding:12px 16px;background:rgba(74,158,255,.06);border:1px solid rgba(74,158,255,.18);border-radius:var(--r);font-size:12px;color:#a0c8ff;margin-bottom:.75rem;line-height:1.7}
+.nta-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+
+/* bands */
+.bands-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rl);overflow:hidden;margin-bottom:.25rem}
+.band-head{display:grid;grid-template-columns:2fr 55px 1fr 1fr;padding:9px 18px;background:var(--s2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+.band-row{display:grid;grid-template-columns:2fr 55px 1fr 1fr;padding:13px 18px;border-top:1px solid var(--b1);align-items:center;font-size:13px;transition:background .1s}
+.band-row:hover{background:var(--s2)}
+.band-row.hit{background:rgba(0,135,81,.05)}
+.band-name{color:var(--t1)}
+.bar-bg{height:3px;background:var(--s3);border-radius:2px;margin-top:5px}
+.bar-fg{height:3px;background:var(--g);border-radius:2px;transition:width .5s ease}
+.r{text-align:right;color:var(--t2)}
+.rb{text-align:right;font-weight:600;color:var(--t1)}
+.rate-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block}
+.rp-lo{background:rgba(0,135,81,.15);color:#4caf7d}
+.rp-mid{background:rgba(212,168,67,.15);color:var(--am)}
+.rp-hi{background:rgba(192,57,43,.15);color:#e57368}
+.rp-zero{background:var(--s3);color:var(--t3)}
+
+/* table */
+.tx-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rl);overflow:hidden}
+.tx-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+th{background:var(--s2);padding:10px 16px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);border-bottom:1px solid var(--b1);white-space:nowrap}
+td{padding:11px 16px;border-top:1px solid var(--b1);color:var(--t2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:hover td{background:var(--s2)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px}
+.tag-y{background:rgba(0,135,81,.14);color:#4caf7d}
+.tag-n{background:var(--s3);color:var(--t3)}
+.chain-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(74,158,255,.1);color:var(--bl);text-transform:uppercase;letter-spacing:.04em}
+.mono{font-family:var(--mono);font-size:11px;color:var(--t3)}
+
+/* exports */
+.export-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:1.75rem;padding-bottom:2rem}
+.btn-ghost{height:38px;padding:0 18px;font-size:13px;font-weight:500;font-family:var(--font);background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .12s,color .12s,border-color .12s}
+.btn-ghost:hover{background:var(--s2);color:var(--t1);border-color:var(--b3)}
+
+/* footer */
+.footer{text-align:center;padding:2rem 1rem;font-size:11px;color:var(--t3);border-top:1px solid var(--b1);margin-top:3rem}
+.footer a{color:var(--t2);text-decoration:none}
+.footer a:hover{color:var(--t1)}
+
+@media(max-width:600px){
+  .topbar{padding:.75rem 1rem}
+  .hero{padding:2.5rem 1rem 2rem}
+  .date-grid{grid-template-columns:1fr 1fr}
+  .btn-analyze{grid-column:1/-1;width:100%}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .band-head,.band-row{grid-template-columns:1.6fr 48px 1fr 1fr;padding:10px 12px;font-size:12px}
+  .topbar-right{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="flag"><div class="fg"></div><div class="fw"></div><div class="fg"></div></div>
+    <span class="brand">Naija<span>Tax</span></span>
+  </div>
+  <div class="topbar-right">
+    <div class="nansen-badge">
+      <span class="nansen-dot"></span>
+      Powered by Nansen
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">
+    <span class="nansen-dot"></span>
+    On-Chain Tax · Nigeria
+  </div>
+  <h1>Your crypto taxes,<br/><em>explained in plain English</em></h1>
+  <p>Paste your EVM wallet. Nansen classifies every transaction. We calculate your estimated tax under Nigeria's progressive income bands.</p>
+</div>
+
+<!-- INPUT -->
+<div class="input-wrap">
+  <div class="input-card">
+    <div class="wallet-field">
+      <label class="field-label" for="wallet">EVM Wallet Address</label>
+      <input type="text" id="wallet" placeholder="0x28c6c06298d514db089934071355e5743bf21d60" autocomplete="off" spellcheck="false"/>
+    </div>
+    <div class="date-grid">
+      <div>
+        <label class="field-label" for="dfrom">From</label>
+        <input type="date" id="dfrom" value="2025-01-01"/>
+      </div>
+      <div>
+        <label class="field-label" for="dto">To</label>
+        <input type="date" id="dto" value="2025-12-31"/>
+      </div>
+      <button class="btn-analyze" id="btn-analyze" onclick="run()">Analyze →</button>
+    </div>
+    <div class="disclaimer">
+      <strong>⚠ Disclaimer:</strong> Educational estimate only. Nigeria's FIRS has not issued formal crypto tax guidance. DEX swap gains are treated as income. NGN rate is live from today. Not tax advice — consult a professional.
+    </div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+  <div class="warn-box"  id="warn-box"></div>
+</div>
+
+<!-- SKELETON -->
+<div class="skeleton-wrap" id="skeleton">
+  <div class="skel skel-label"></div>
+  <div class="skel skel-summary"></div>
+  <div class="skel-metrics">
+    <div class="skel skel-metric"></div>
+    <div class="skel skel-metric"></div>
+    <div class="skel skel-metric"></div>
+  </div>
+  <div class="skel skel-label" style="margin-top:1.5rem"></div>
+  <div class="skel skel-bands"></div>
+  <div class="skel skel-label" style="margin-top:1.5rem"></div>
+  <div class="skel skel-table"></div>
+</div>
+
+<!-- RESULTS -->
+<div class="results" id="results">
+  <div class="summary-card" id="summary"></div>
+  <div class="metrics-grid" id="metrics"></div>
+
+  <div class="sec-label">
+    Tax Band Breakdown
+    <span class="regime-pill" id="regime-pill"></span>
+  </div>
+  <div id="nta-callout"></div>
+  <div class="bands-card" id="bands"></div>
+
+  <div class="sec-label" style="margin-top:1.75rem">
+    Transactions — Nansen Labeled
+    <span style="font-size:10px;font-weight:500;color:var(--t3);text-transform:none;letter-spacing:0">(top 50 shown)</span>
+  </div>
+  <div class="tx-card">
+    <div class="tx-scroll">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Classification</th><th>Chain</th>
+          <th>Nansen Label</th><th>Tx Hash</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="export-row">
+    <button class="btn-ghost" onclick="dlCSV()">↓ Export CSV</button>
+    <button class="btn-ghost" onclick="dlReport()">↓ Download Report</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Transaction data by <a href="https://nansen.ai" target="_blank">Nansen API</a> &nbsp;·&nbsp;
+  FX rates by ExchangeRate-API &nbsp;·&nbsp;
+  Tax law source: Nigeria Tax Act 2025 (KPMG Nigeria) &nbsp;·&nbsp;
+  Built for <a href="https://nansen.ai" target="_blank">Nansen Points Season 3</a>
+</div>
+
+<script>
+'use strict';
+let last = null;
+
+// ── Formatters ──────────────────────────────────────────────────────────────
+const fNgn = n => {
+  if(n>=1e9) return '₦'+(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return '₦'+(n/1e6).toFixed(2)+'M';
+  return '₦'+Math.round(n).toLocaleString();
+};
+const fUsd = n => {
+  if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return '$'+Math.round(n).toLocaleString();
+  return '$'+n.toFixed(2);
+};
+const fDate = s => {
+  try{ return new Date(s).toLocaleDateString('en-NG',{day:'2-digit',month:'short',year:'numeric'}); }
+  catch{ return s||'—'; }
+};
+const fHash = h => h ? h.slice(0,8)+'…'+h.slice(-6) : '—';
+
+// ── Main ────────────────────────────────────────────────────────────────────
+async function run() {
+  const addr  = document.getElementById('wallet').value.trim();
+  const dfrom = document.getElementById('dfrom').value;
+  const dto   = document.getElementById('dto').value;
+
+  // Reset
+  document.getElementById('error-box').className = 'error-box';
+  document.getElementById('warn-box').className  = 'warn-box';
+  document.getElementById('results').className   = 'results';
+
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  document.getElementById('skeleton').className = 'skeleton-wrap show';
+
+  try {
+    const res  = await fetch('/api/analyze', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({address:addr, date_from:dfrom, date_to:dto})
+    });
+    const data = await res.json();
+
+    document.getElementById('skeleton').className = 'skeleton-wrap';
+
+    if (!res.ok) {
+      showErr(data.error || 'Something went wrong. Please try again.');
+      btn.disabled = false; btn.textContent = 'Analyze →';
+      return;
+    }
+
+    if (data.warning) {
+      const w = document.getElementById('warn-box');
+      w.innerHTML = '⚠ ' + data.warning;
+      w.className = 'warn-box show';
+    }
+
+    last = data;
+    render(data);
+
+  } catch(e) {
+    document.getElementById('skeleton').className = 'skeleton-wrap';
+    showErr('Could not reach the server. Make sure Flask is running: python app.py');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analyze →';
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function render(d) {
+  const isNTA = d.regime && d.regime.note === 'nta';
+
+  // Summary
+  const gbCls  = d.gain_source === 'realized' ? 'gb-real' : 'gb-est';
+  const gbText = d.gain_source === 'realized' ? '✓ Real PnL' : '~ Estimated';
+  const gainNote = d.gain_source === 'realized'
+    ? 'Nansen realized PnL'
+    : '15% estimate of swap volume';
+  document.getElementById('summary').innerHTML =
+    `Your wallet made <strong>${d.taxable_count} taxable DEX swap${d.taxable_count!==1?'s':''}</strong>
+     out of <strong>${d.total_txns} total transactions</strong>
+     (${d.date_from} → ${d.date_to}).
+     Taxable gain: <strong>${fNgn(d.gain_ngn)}</strong>
+     <span class="gain-badge ${gbCls}">${gbText}</span>
+     based on ${gainNote} at ₦${Math.round(d.usd_ngn).toLocaleString()}/$1.
+     Under Nigeria's ${isNTA ? 'NTA 2025' : 'PITA'} progressive bands,
+     estimated tax is <strong>${fNgn(d.tax_ngn)}</strong>
+     — effective rate <strong>${d.eff_rate.toFixed(1)}%</strong>.
+     ${d.non_taxable_count} transfer/bridge transactions excluded as non-taxable.`;
+
+  // Metrics
+  const winCard = d.win_rate != null
+    ? {lbl:'Win Rate',     val:(d.win_rate*100).toFixed(0)+'%', sub:'Nansen PnL data',    cls:''}
+    : {lbl:'Swap Volume',  val:fUsd(d.swap_vol_usd),            sub:'taxable DEX swaps',  cls:''};
+  const gainSub = d.gain_source==='realized' ? 'Nansen realized PnL' : '15% of volume (est.)';
+
+  const cards = [
+    {lbl:'Total Transactions', val:d.total_txns.toLocaleString(),    sub:d.date_from+' → '+d.date_to, cls:''},
+    {lbl:'Taxable DEX Swaps',  val:d.taxable_count.toLocaleString(), sub:'classified by Nansen',      cls:'c-amber'},
+    winCard,
+    {lbl:'Taxable Gain',       val:fNgn(d.gain_ngn),                 sub:gainSub,                     cls:'c-green'},
+    {lbl:'Estimated Tax',      val:fNgn(d.tax_ngn),                  sub:'progressive bands',          cls:'c-red'},
+    {lbl:'Effective Rate',     val:d.eff_rate.toFixed(1)+'%',        sub:'blended rate',               cls:''},
+  ];
+  document.getElementById('metrics').innerHTML = cards.map(c =>
+    `<div class="metric ${c.cls}">
+       <div class="m-lbl">${c.lbl}</div>
+       <div class="m-val">${c.val}</div>
+       <div class="m-sub">${c.sub}</div>
+     </div>`).join('');
+
+  // Regime pill
+  const pill = document.getElementById('regime-pill');
+  pill.textContent = d.regime ? d.regime.label : '';
+  pill.className   = 'regime-pill ' + (isNTA ? 'rp-nta' : 'rp-pita');
+
+  // NTA callout
+  const callout = document.getElementById('nta-callout');
+  callout.innerHTML = isNTA
+    ? `<div class="nta-callout">
+         <span class="nta-icon">ℹ</span>
+         <span><strong style="color:#7eb8ff">Nigeria Tax Act 2025 is active for this period.</strong>
+         The first <strong style="color:#7eb8ff">₦800,000</strong> is fully exempt from tax.
+         Capital Gains Tax has been merged into income tax — crypto gains now follow the progressive rates below.
+         Top rate raised to <strong style="color:#7eb8ff">25%</strong> for income above ₦50M.
+         Effective January 1, 2026. Source: KPMG Nigeria.</span>
+       </div>`
+    : '';
+
+  // Bands
+  const maxSlice = Math.max(...d.tax_breakdown.map(b=>b.slice), 1);
+  document.getElementById('bands').innerHTML =
+    `<div class="band-head"><div>Band</div><div>Rate</div><div class="r">In Band</div><div class="rb">Tax Due</div></div>`+
+    d.tax_breakdown.map(b => {
+      const pct = Math.round((b.slice/maxSlice)*100);
+      const rpc = b.rate===0 ? 'rp-zero' : b.rate<=0.15 ? 'rp-lo' : b.rate<=0.21 ? 'rp-mid' : 'rp-hi';
+      return `<div class="band-row ${b.slice>0?'hit':''}">
+        <div class="band-name">${b.label}
+          <div class="bar-bg"><div class="bar-fg" style="width:${pct}%"></div></div>
+        </div>
+        <div><span class="rate-pill ${rpc}">${b.rate===0?'0%':Math.round(b.rate*100)+'%'}</span></div>
+        <div class="r">${b.slice>0?fNgn(b.slice):'—'}</div>
+        <div class="rb">${b.tax>0?fNgn(b.tax):b.rate===0&&b.slice>0?'<span style="color:var(--g);font-weight:600">Exempt</span>':'—'}</div>
+      </div>`;
+    }).join('');
+
+  // Transactions
+  document.getElementById('tbody').innerHTML = d.transactions.map(tx =>
+    `<tr>
+       <td>${fDate(tx.date)}</td>
+       <td><span class="tag ${tx.taxable?'tag-y':'tag-n'}">${tx.taxable?'◆ Taxable':'○ Non-taxable'}</span></td>
+       <td><span class="chain-tag">${tx.chain}</span></td>
+       <td class="mono" title="${tx.type}">${tx.type.slice(0,24)}</td>
+       <td class="mono" title="${tx.hash}">${fHash(tx.hash)}</td>
+     </tr>`).join('');
+
+  document.getElementById('results').className = 'results show';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Exports ─────────────────────────────────────────────────────────────────
+function dlCSV() {
+  if(!last) return;
+  const rows = [['Date','Taxable','Chain','Nansen Label','Tx Hash','Volume USD']];
+  last.transactions.forEach(t =>
+    rows.push([t.date,t.taxable?'YES':'NO',t.chain,t.type,t.hash,t.volume_usd]));
+  rows.push([],['--- Summary ---'],
+    ['Wallet',last.address],['Period',last.date_from+' to '+last.date_to],
+    ['Tax Regime',last.regime?last.regime.label:''],
+    ['USD/NGN Rate',last.usd_ngn],['Total Transactions',last.total_txns],
+    ['Taxable DEX Swaps',last.taxable_count],['Swap Volume USD',last.swap_vol_usd],
+    ['Gain Source',last.gain_source],['Estimated Gain NGN',last.gain_ngn],
+    ['Estimated Tax NGN',last.tax_ngn],['Effective Rate %',last.eff_rate]);
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  dl('naija-tax-report.csv', csv, 'text/csv');
+}
+
+function dlReport() {
+  if(!last) return;
+  const d    = last;
+  const isNTA = d.regime && d.regime.note === 'nta';
+  const html = `<!DOCTYPE html><html><head>
+<title>Naija Tax Report — ${d.address.slice(0,10)}…</title>
+<meta charset="UTF-8"/>
+<style>
+  body{font-family:Arial,sans-serif;max-width:780px;margin:48px auto;color:#111;font-size:14px;line-height:1.65;}
+  .hdr{border-bottom:3px solid #008751;padding-bottom:16px;margin-bottom:24px;}
+  h1{color:#008751;font-size:22px;margin-bottom:6px;}
+  .meta{font-size:12px;color:#555;line-height:1.8;}
+  .regime{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:8px;margin-left:8px;
+    background:${isNTA?'rgba(74,158,255,.12)':'rgba(212,168,67,.12)'};
+    color:${isNTA?'#185FA5':'#85500B'};}
+  .metrics{display:flex;flex-wrap:wrap;gap:14px;margin:20px 0;}
+  .m{background:#f5f5f5;border-radius:8px;padding:14px 18px;min-width:130px;}
+  .ml{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:5px;}
+  .mv{font-size:20px;font-weight:700;color:#008751;}
+  .mv.red{color:#c0392b;}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#555;border-bottom:1px solid #eee;padding-bottom:6px;margin:26px 0 10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:#f2f2f2;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;}
+  td{padding:8px 12px;border-bottom:1px solid #eee;}
+  .nta{background:#EEF6FF;border-left:4px solid #4a9eff;padding:12px 16px;font-size:12px;color:#333;margin-bottom:16px;border-radius:4px;}
+  .disc{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;font-size:12px;color:#555;margin-top:28px;border-radius:4px;}
+  .foot{text-align:center;font-size:11px;color:#aaa;margin-top:40px;padding-top:20px;border-top:1px solid #eee;}
+  @media print{body{margin:20px}}
+</style></head><body>
+<div class="hdr">
+  <h1>🇳🇬 Nigerian On-Chain Tax Report <span class="regime">${d.regime?d.regime.label:''}</span></h1>
+  <div class="meta">
+    <strong>Wallet:</strong> ${d.address}<br/>
+    <strong>Period:</strong> ${d.date_from} → ${d.date_to} &nbsp;|&nbsp;
+    <strong>Generated:</strong> ${new Date().toLocaleDateString('en-NG')} &nbsp;|&nbsp;
+    <strong>USD/NGN Rate:</strong> ₦${Math.round(d.usd_ngn).toLocaleString()} &nbsp;|&nbsp;
+    <strong>Gain source:</strong> ${d.gain_source === 'realized' ? 'Nansen Realized PnL' : '15% estimate of swap volume'}
+  </div>
+</div>
+${isNTA ? `<div class="nta"><strong>Nigeria Tax Act 2025 applied.</strong> First ₦800,000 is fully exempt. CGT merged into PIT. Top rate 25% above ₦50M. Effective January 2026.</div>` : ''}
+<div class="metrics">
+  <div class="m"><div class="ml">Total Transactions</div><div class="mv">${d.total_txns}</div></div>
+  <div class="m"><div class="ml">Taxable DEX Swaps</div><div class="mv">${d.taxable_count}</div></div>
+  <div class="m"><div class="ml">Taxable Gain</div><div class="mv">${fNgn(d.gain_ngn)}</div></div>
+  <div class="m"><div class="ml">Estimated Tax</div><div class="mv red">${fNgn(d.tax_ngn)}</div></div>
+  <div class="m"><div class="ml">Effective Rate</div><div class="mv">${d.eff_rate.toFixed(1)}%</div></div>
+</div>
+<h2>Tax Band Breakdown</h2>
+<table><tr><th>Band</th><th>Rate</th><th>Income in Band</th><th>Tax Due</th></tr>
+${d.tax_breakdown.map(b=>`<tr>
+  <td>${b.label}</td>
+  <td>${b.rate===0?'0% (exempt)':Math.round(b.rate*100)+'%'}</td>
+  <td>${b.slice>0?fNgn(b.slice):'—'}</td>
+  <td>${b.tax>0?fNgn(b.tax):b.rate===0&&b.slice>0?'<strong style="color:#008751">Exempt</strong>':'—'}</td>
+</tr>`).join('')}
+</table>
+<div class="disc"><strong>⚠ Disclaimer:</strong> This is an educational estimate only. Nigeria's FIRS has not issued formal crypto tax guidance. All DEX swap gains are treated as income. Consult a qualified Nigerian tax professional before filing.</div>
+<div class="foot">Powered by Nansen API &nbsp;·&nbsp; naija-tax-explainer &nbsp;·&nbsp; Built for Nansen Points Season 3</div>
+</body></html>`;
+  dl('naija-tax-report.html', html, 'text/html');
+}
+
+function dl(name, content, type) {
+  const a = Object.assign(document.createElement('a'),
+    {href: URL.createObjectURL(new Blob([content],{type})), download: name});
+  a.click();
+}
+
+function showErr(msg) {
+  const e = document.getElementById('error-box');
+  e.textContent = msg; e.className = 'error-box show';
+}
+
+document.getElementById('wallet').addEventListener('keydown', e => {
+  if(e.key==='Enter') run();
+});
+</script>
+</body>
+</html>
