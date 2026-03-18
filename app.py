@@ -17,7 +17,7 @@ CORS(app)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 ETHERSCAN_KEY  = os.environ.get("ETHERSCAN_API_KEY", "2NS4284PMNRUJIG8QW3Y8EMCGUPTECJY2P")
-ETHERSCAN_BASE = "https://api.etherscan.io/api"
+ETHERSCAN_BASE = "https://api.etherscan.io/v2/api"
 EXCHANGE_URL   = "https://api.exchangerate-api.com/v4/latest/USD"
 
 # ── Nigerian Tax Bands ─────────────────────────────────────────────────────────
