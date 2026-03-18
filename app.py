@@ -126,18 +126,18 @@ def analyze():
     usd_ngn = get_ngn_rate()
     regime  = get_regime(date_to)
 
-    # ── Fetch transactions — FREE beta endpoint (0 credits) ───────────────────
-    # Endpoint: POST /api/beta/profiler/address/transactions
-    # Schema: parameters{} wrapper with walletAddress (singular), chain,
-    #         hideSpamToken + filters{} with blockTimestamp + volumeUsd
+    # ── Fetch transactions — FREE 0-credit endpoint ────────────────────────────
+    # Source: docs.nansen.ai/nansen-api-reference
+    # Cost: 0 credits (FREE, requires attribution)
+    # Key: walletAddresses is an ARRAY, chain: "all", parameters wrapper
     transactions, nansen_error = [], None
 
     for page in range(1, 4):
         payload = {
             "parameters": {
-                "walletAddress": addr,
-                "chain":         "ethereum",
-                "hideSpamToken": True,
+                "walletAddresses": [addr],
+                "chain":           "all",
+                "hideSpamToken":   True,
             },
             "pagination": {
                 "page":           page,
