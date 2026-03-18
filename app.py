@@ -13,7 +13,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-NANSEN_KEY   = os.environ.get("NANSEN_API_KEY", "q4IsFoHGCDKSUOAyMJ1QPzqgW3NUiTdG")
+NANSEN_KEY   = os.environ.get("NANSEN_API_KEY", "EGT5p6ea39tmtMelptLJ9y8daau3lKIG")
 NANSEN_BASE  = "https://api.nansen.ai/api/beta"
 EXCHANGE_URL = "https://api.exchangerate-api.com/v4/latest/USD"
 HEADERS      = {"Content-Type": "application/json", "apikey": NANSEN_KEY}
@@ -167,11 +167,14 @@ def analyze():
         if len(txs) < 100 or pagination.get("is_last_page"):
             break
 
-    if nansen_error == "timeout" and not transactions:
-        return jsonify({"error":
-            "Nansen timed out. Try a shorter date range — 3 months works best."}), 504
-
     if nansen_error and not transactions:
+        if '403' in str(nansen_error) or '401' in str(nansen_error):
+            return jsonify({"error":
+                "Nansen API credits required to fetch live data. "
+                "This app is built and ready — add Nansen API credits to your account to activate live wallet analysis."}), 402
+        if nansen_error == "timeout":
+            return jsonify({"error":
+                "Nansen timed out. Try a shorter date range — 3 months works best."}), 504
         return jsonify({"error": nansen_error}), 502
 
     if not transactions:
