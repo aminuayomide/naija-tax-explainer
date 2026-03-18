@@ -86,11 +86,11 @@ def get_ngn_rate() -> float:
     except Exception:
         return 1620.0
 
-def nansen_get(endpoint: str, params: dict, timeout: int = 30):
+def nansen_post(endpoint: str, payload: dict, timeout: int = 30):
     try:
-        resp = requests.get(
-            f"{NANSEN_BASE}/{endpoint}",
-            params=params,
+        resp = requests.post(
+            f"https://api.nansen.ai/api/beta/{endpoint}",
+            json=payload,
             headers=HEADERS,
             timeout=timeout,
         )
@@ -126,19 +126,32 @@ def analyze():
     usd_ngn = get_ngn_rate()
     regime  = get_regime(date_to)
 
-    # ── Fetch transactions via GET with query params ───────────────────────────
+    # ── Fetch transactions — FREE beta endpoint (0 credits) ───────────────────
+    # Endpoint: POST /api/beta/profiler/address/transactions
+    # Schema: parameters{} wrapper with walletAddress (singular), chain,
+    #         hideSpamToken + filters{} with blockTimestamp + volumeUsd
     transactions, nansen_error = [], None
 
     for page in range(1, 4):
-        params = {
-            "address":   addr,
-            "chain":     "ethereum",
-            "from_date": date_from,
-            "to_date":   date_to,
-            "page":      page,
-            "per_page":  100,
+        payload = {
+            "parameters": {
+                "walletAddress": addr,
+                "chain":         "ethereum",
+                "hideSpamToken": True,
+            },
+            "pagination": {
+                "page":           page,
+                "recordsPerPage": 100,
+            },
+            "filters": {
+                "volumeUsd": {"from": 0.1},
+                "blockTimestamp": {
+                    "from": date_from + "T00:00:00.000Z",
+                    "to":   date_to   + "T23:59:59.999Z",
+                }
+            }
         }
-        data, err = nansen_get("profiler/address/transactions", params, timeout=30)
+        data, err = nansen_post("profiler/address/transactions", payload, timeout=30)
 
         if err:
             nansen_error = err
