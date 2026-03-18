@@ -112,7 +112,7 @@ def get_eth_price():
     try:
         r = requests.get(
             ETHERSCAN_BASE,
-            params={"module": "stats", "action": "ethprice", "apikey": ETHERSCAN_KEY},
+            params={"chainid": 1, "module": "stats", "action": "ethprice", "apikey": ETHERSCAN_KEY},
             timeout=8
         )
         d = r.json()
@@ -135,6 +135,7 @@ def fetch_transactions(addr, date_from, date_to):
     for page in range(1, 6):
         try:
             r = requests.get(ETHERSCAN_BASE, params={
+                "chainid":    1,
                 "module":     "account",
                 "action":     "txlist",
                 "address":    addr,
